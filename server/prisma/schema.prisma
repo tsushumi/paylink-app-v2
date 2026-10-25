@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  phone         String?
+  createdAt     DateTime       @default(now())
+  paymentLinks  PaymentLink[]
+  notifications Notification[]
+}
+
+model PaymentLink {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  description String
+  amount      Int
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  payments    Payment[]
+
+  @@index([userId])
+}
+
+model Payment {
+  id                  String      @id @default(cuid())
+  paymentLinkId       String
+  paymentLink         PaymentLink @relation(fields: [paymentLinkId], references: [id], onDelete: Cascade)
+  phone               String
+  payerName           String?
+  payerEmail          String?
+  amount              Int
+  status              String      @default("pending") // pending | completed | failed
+  checkoutRequestId   String?     @unique
+  merchantRequestId   String?
+  mpesaReceiptNumber  String?
+  failureReason       String?
+  paidAt              DateTime?
+  createdAt           DateTime    @default(now())
+
+  @@index([paymentLinkId])
+  @@index([status, paidAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  message   String
+  data      String   @default("{}") // JSON string (SQLite has no Json type)
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+}
